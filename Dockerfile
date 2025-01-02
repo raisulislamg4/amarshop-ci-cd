@@ -1,5 +1,5 @@
 # Name the single Python image we're using everywhere.
-ARG python=python:3.11-slim
+ARG python=python:3.13-slim
 
 # Build stage:
 FROM ${python} AS build
