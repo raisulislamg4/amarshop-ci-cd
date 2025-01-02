@@ -1,1 +1,79 @@
-test
+name: Buil and Push Action
+description: A composit action to build and push image to DockerHub
+
+inputs:
+  dockerhub-username:
+    description: "dockerhub-username"
+    required: true
+
+  dockerhub-token:
+    description: "dockerhub-token"
+    required: true
+
+  image-name:
+    description: "image-name"
+    required: true
+
+  image-tag:
+    description: "image-tag"
+    required: true
+
+outputs:
+  result:
+    description: "Result of the Action"
+    value: ${{ steps.final-result.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+  - name: DockerHub Authentication
+    shell: bash
+    id: login
+    run: |
+      if echo ${{inputs.dockerhub-token}} | docker login -u ${{inputs.dockerhub-username}} --password-stdin; then
+        echo "Login Successfull"
+        echo "result=success" >> $GITHUB_OUTPUT
+      else
+        echo "Login Failed"
+        echo "result=login failed" >> $GITHUB_OUTPUT
+      fi
+
+  - name: Build Image 
+    shell: bash
+    id: build
+    if: steps.login.outputs.result == 'success'
+    run: |
+      if docker build -t ${{inputs.dockerhub-username}}/${{inputs.image-name}}:${{inputs.image-tag}} .; then
+        echo "Build Successfull"
+        echo "result=success" >> $GITHUB_OUTPUT
+      else
+        echo "Build Failed"
+        echo "result=build failed" >> $GITHUB_OUTPUT
+      fi
+
+  - name: Push Image to DockerHub
+    shell: bash
+    id: push
+    if: steps.login.outputs.result == 'success' && steps.build.outputs.result == 'success'
+    run: |
+      if docker push ${{inputs.dockerhub-username}}/${{inputs.image-name}}:${{inputs.image-tag}}; then
+        echo "Push Successfull"
+        echo "result=success" >> $GITHUB_OUTPUT
+      else
+        echo "Push Failed"
+        echo "result=push failed" >> $GITHUB_OUTPUT
+      fi
+
+  - name: Output Results
+    shell: bash
+    id: final-result
+    run: |
+      if [ "${{steps.login.outputs.result}}" != "success" ]; then
+        echo "result=failure(login failed)" >> $GITHUB_OUTPUT
+      elif [ "${{steps.build.outputs.result}}" != "success" ]; then
+        echo "result=failure(build failed)" >> $GITHUB_OUTPUT
+      elif [ "${{steps.push.outputs.result}}" != "success" ]; then
+        echo "result=failure(push failed)" >> $GITHUB_OUTPUT
+      else
+        echo "result=success" >> $GITHUB_OUTPUT
+      fi

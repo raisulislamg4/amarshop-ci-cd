@@ -1,0 +1,28 @@
+name: Build Image and Push to DockerHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Enter Image Tag"
+        required: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout to Action
+      uses: actions/checkout@v4
+
+    - name: Call Composite Action
+      id: build-and-push
+      uses: ./
+      with:
+        dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+        dockerhub-token: ${{ secrets.DOCKERHUB_SECRET }}
+        image-name: "amarshop-ci-cd"
+        image-tag: ${{ github.event.inputs.image_tag }}
+
+    - name: Print Result
+      run: |
+        echo "Build and Push result is: ${{ steps.build-and-push.outputs.result }}"
